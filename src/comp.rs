@@ -29,16 +29,36 @@ pub trait Comps {
     type RegData;
     /// A type of error to be returned when failing to register a type of component.
     type RegError;
+
+    /// Register a new type of components, allowing the manager to store them.
     fn register_comp<T: Comp>(&mut self, Self::RegData) -> Result<(), Self::RegError>;
+
+    /// Get a reference to the `idx`th component `T` of the entity `e`.
+    /// Returns `None` if that component does not exist.
     fn get<T: Comp>(&self, e: EntId, idx: usize) -> Option<&T>;
+
+    /// Get a mutable reference to the `idx`th component `T` of the entity `e`.
+    /// Returns `None` if that component does not exist.
     fn get_mut<T: Comp>(&mut self, e: EntId, idx: usize) -> Option<&mut T>;
+
+    /// Get a reference to the first component `T` of the entity `e`.
+    /// Returns `None` if that component does not exist.
     fn get_first<T: Comp>(&self, e: EntId) -> Option<&T> {
         Self::get::<T>(self, e, 0)
     }
+
+    /// Get a mutable reference to the first component `T` of the entity `e`.
+    /// Returns `None` if that component does not exist.
     fn get_first_mut<T: Comp>(&mut self, e: EntId) -> Option<&mut T> {
         Self::get_mut::<T>(self, e, 0)
     }
+    /// Adds a new component `T` to the entity `e` and returns its index.
     fn insert<T: Comp>(&mut self, e: EntId, comp: T) -> usize;
+
+    /// Removes the `idx`th component `T` of the entity `e` and returns it.
+    /// Returns `None` if that component did not exist.
     fn remove<T: Comp>(&mut self, e: EntId, idx: usize) -> Option<T>;
+
+    /// Removes all components `T` of the entity `e`.
     fn remove_all<T: Comp>(&mut self, e: EntId);
 }
