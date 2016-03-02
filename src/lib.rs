@@ -33,7 +33,7 @@ impl<Cs, Ss> State<Cs, Ss>
             comps: comps,
             systs: systs,
             ents: BTreeSet::new(),
-            current: 1,
+            current: 0,
         }
     }
 
@@ -55,6 +55,11 @@ impl<Cs, Ss> State<Cs, Ss>
     /// Removes the entity `e` and all of its components.
     pub fn delete_ent(&mut self, e: EntId) {
         self.ents.remove(&e);
+    }
+
+    /// Update the state.
+    pub fn update(&mut self, data: &Ss::UpdateData) {
+        self.systs.update(&mut self.comps, data);
     }
 }
 

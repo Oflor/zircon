@@ -9,7 +9,7 @@ use std::collections::{HashMap, BTreeMap};
 use std::any::TypeId;
 use std::mem::transmute;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 struct Vec2f(f32, f32);
 
 impl Add<Vec2f> for Vec2f {
@@ -19,15 +19,15 @@ impl Add<Vec2f> for Vec2f {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct MyComps {
-    comps: HashMap<TypeId, BTreeMap<EntId, Vec<u8>>>,
+    comps: HashMap<TypeId, BTreeMap<EntId, Vec<Vec2f>>>,
 }
 
 impl Comps for MyComps {
     type RegData = ();
     type RegError = ();
-    fn register_comp<T: Comp>(&mut self, _: ()) -> Result<(), ()> {
+    fn register_comp<T: Comp>(&mut self, _: &()) -> Result<(), ()> {
         self.comps.insert(TypeId::of::<T>(), BTreeMap::new());
         Ok(())
     }
@@ -94,16 +94,59 @@ impl Comps for MyComps {
             btm.remove(&e);
         }
     }
+
+    fn len<T: Comp>(&self, e: EntId) -> usize {
+        if let Some(btm) = self.comps.get(&TypeId::of::<T>()) {
+            if let Some(vec) = btm.get(&e) {
+                unsafe { transmute::<_, &Vec<T>>(vec) }.len()
+            } else {
+                0
+            }
+        } else {
+            0
+        }
+    }
 }
 
 #[derive(Default)]
 struct MySysts;
 
 impl Systs for MySysts {
+    type UpdateData = ();
     type Comps = MyComps;
+    fn update(&mut self, comps: &mut MyComps, _: &()) {
+        if let Some(btm) = comps.comps.get_mut(&TypeId::of::<Vec2f>()) {
+            for (_, vec) in btm {
+                if vec.len() < 2 {
+                    continue;
+                }
+                vec[0] = vec[0] + vec[1];
+            }
+        }
+    }
 }
 
 fn main() {
-    let mut state = State::<MyComps, MySysts>::default();
-    state.comps.register_comp::<Vec2f>(()).unwrap();
+    let mut w = State::<MyComps, MySysts>::default();
+    w.comps.register_comp::<Vec2f>(&()).unwrap();
+    for i in 0..4 {
+        for j in 0..2 {
+            let e = w.new_ent();
+            w.comps.insert(e,
+                           Vec2f(0.125 * (j + i * 6) as f32, 0.25 * (j + i * 6) as f32));
+            w.comps.insert(e,
+                           Vec2f(0.25 * (j + i * 6) as f32, 0.125 * (j + i * 6) as f32));
+        }
+        for j in 2..4 {
+            let e = w.new_ent();
+            w.comps.insert(e,
+                           Vec2f(0.125 * (j + i * 6) as f32, 0.25 * (j + i * 6) as f32));
+        }
+        for j in 4..6 {
+            let e = w.new_ent();
+        }
+    }
+    println!("{:?}", w.comps);
+    w.update(&());
+    println!("{:?}", w.comps);
 }
