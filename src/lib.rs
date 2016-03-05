@@ -1,38 +1,104 @@
 //! Zircon - Entity Component System (ECS) implementation in Rust
 
-pub mod comp;
-pub mod syst;
-
-use comp::*;
-use syst::*;
-
 use std::collections::BTreeSet;
 use std::default::Default;
+use std::any::Any;
 
 /// Entity.
 pub type EntId = u64;
 
-/// The main struct of an ECS, `State` contains all systems, components and entities of the system.
-pub struct State<Cs, Ss> {
+pub type Ents = BTreeSet<EntId>;
+
+/// A plain-old-data struct used as a component.
+pub trait Comp: Any + Sized + Clone {}
+
+impl<T> Comp for T where T: Any + Sized + Clone
+{}
+
+/// A manager of components.
+///
+/// Its purpose is to store and return components in association with their owning entities.
+/// Each of the trait's methods reflects on component's type.
+/// If we want to get the second `Vec2` component of an entity `e`, we do this:
+///
+/// ```
+/// comps.get::<Vec2>(e, 1);
+/// ```
+///
+/// Note, that like everything in Rust, entity's components are zero-indexed.
+pub trait Comps {
+    /// A type of additional data to be used when registring a new type of components.
+    /// Could be used to specify the style of storing the components of that type in memory.
+    type RegData;
+    /// A type of error to be returned when failing to register a type of components.
+    type RegError;
+
+    /// Register a new type of components, allowing the manager to store them.
+    fn register_comp<T: Comp>(&mut self, &Self::RegData) -> Result<(), Self::RegError>;
+
+    /// Get a reference to the `idx`th component `T` of the entity `e`.
+    /// Returns `None` if that component does not exist.
+    fn get<T: Comp>(&self, e: EntId, idx: usize) -> Option<&T>;
+
+    /// Get a mutable reference to the `idx`th component `T` of the entity `e`.
+    /// Returns `None` if that component does not exist.
+    fn get_mut<T: Comp>(&mut self, e: EntId, idx: usize) -> Option<&mut T>;
+
+    /// Get a reference to the first component `T` of the entity `e`.
+    /// Returns `None` if that component does not exist.
+    fn get_first<T: Comp>(&self, e: EntId) -> Option<&T> {
+        Self::get::<T>(self, e, 0)
+    }
+
+    /// Get a mutable reference to the first component `T` of the entity `e`.
+    /// Returns `None` if that component does not exist.
+    fn get_first_mut<T: Comp>(&mut self, e: EntId) -> Option<&mut T> {
+        Self::get_mut::<T>(self, e, 0)
+    }
+    /// Adds a new component `T` to the entity `e` and returns its index.
+    fn insert<T: Comp>(&mut self, e: EntId, comp: T) -> usize;
+
+    /// Removes the `idx`th component `T` of the entity `e` and returns it.
+    /// Returns `None` if that component did not exist.
+    fn remove<T: Comp>(&mut self, e: EntId, idx: usize) -> Option<T>;
+
+    /// Removes all components `T` of the entity `e`.
+    fn remove_all<T: Comp>(&mut self, e: EntId);
+
+    /// Returns the number of components `T` of the entity `e`.
+    fn len<T: Comp>(&self, e: EntId) -> usize;
+}
+
+/// State updater
+pub trait Updater {
+    /// Data to send with the update method.
+    type UpdateData;
+    type Comps: Comps;
+    /// Updates the world state.
+    fn update(&mut self, ents: &mut Ents, comps: &mut Self::Comps, data: &Self::UpdateData);
+}
+
+/// The main struct of an ECS, `State` stores the updater, components and entities of the system.
+pub struct State<Cs, Upd> {
     pub comps: Cs,
-    pub systs: Ss,
-    ents: BTreeSet<EntId>,
+    pub updater: Upd,
+    pub ents: Ents,
     current: EntId,
 }
 
-impl<Cs, Ss> State<Cs, Ss>
+impl<Cs, Upd> State<Cs, Upd>
     where Cs: Comps,
-          Ss: Systs<Comps = Cs>
+          Upd: Updater<Comps = Cs>
 {
     /// Creates a new empty `State` with the specified components and systems managers.
     ///
     /// The new `State` contains no entities, and the next alive entity will have ID #1.
     /// Entity #0 is considered invalid, using it may cause panics.
-    pub fn new(comps: Cs, systs: Ss) -> State<Cs, Ss> {
+    pub fn new(comps: Cs, updater: Upd) -> State<Cs, Upd> {
         State {
             comps: comps,
-            systs: systs,
-            ents: BTreeSet::new(),
+            updater: updater,
+            ents: Ents::new(),
             current: 0,
         }
     }
@@ -58,16 +124,16 @@ impl<Cs, Ss> State<Cs, Ss>
     }
 
     /// Update the state.
-    pub fn update(&mut self, data: &Ss::UpdateData) {
-        self.systs.update(&mut self.comps, data);
+    pub fn update(&mut self, data: &Upd::UpdateData) {
+        self.updater.update(&mut self.ents, &mut self.comps, data);
     }
 }
 
-impl<Cs, Ss> Default for State<Cs, Ss>
+impl<Cs, Upd> Default for State<Cs, Upd>
     where Cs: Comps + Default,
-          Ss: Systs<Comps = Cs> + Default
+          Upd: Updater<Comps = Cs> + Default
 {
-    fn default() -> State<Cs, Ss> {
-        State::new(Cs::default(), Ss::default())
+    fn default() -> State<Cs, Upd> {
+        State::new(Cs::default(), Upd::default())
     }
 }

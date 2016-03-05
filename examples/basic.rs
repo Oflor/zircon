@@ -1,8 +1,6 @@
 extern crate zircon;
 
-use zircon::{EntId, State};
-use zircon::comp::*;
-use zircon::syst::*;
+use zircon::*;
 
 use std::ops::Add;
 use std::collections::{HashMap, BTreeMap};
@@ -111,10 +109,10 @@ impl Comps for MyComps {
 #[derive(Default)]
 struct MySysts;
 
-impl Systs for MySysts {
+impl Updater for MySysts {
     type UpdateData = ();
     type Comps = MyComps;
-    fn update(&mut self, comps: &mut MyComps, _: &()) {
+    fn update(&mut self, _: &mut Ents, comps: &mut MyComps, _: &()) {
         if let Some(btm) = comps.comps.get_mut(&TypeId::of::<Vec2f>()) {
             for (_, vec) in btm {
                 if vec.len() < 2 {
