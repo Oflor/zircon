@@ -1,12 +1,15 @@
 //! Zircon - Entity Component System (ECS) implementation in Rust
 
+pub mod impls;
+
 use std::collections::BTreeSet;
 use std::default::Default;
 use std::any::Any;
 
-/// Entity.
+/// An entity identifier.
 pub type EntId = u64;
 
+/// A set for storing entities.
 pub type Ents = BTreeSet<EntId>;
 
 /// A plain-old-data struct used as a component.
@@ -69,7 +72,7 @@ pub trait Comps {
     fn len<T: Comp>(&self, e: EntId) -> usize;
 }
 
-/// State updater
+/// State updater. In a classic ECS model, `Updater` is a manager of systems.
 pub trait Updater {
     /// Data to send with the update method.
     type UpdateData;
