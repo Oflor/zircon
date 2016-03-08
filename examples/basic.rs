@@ -17,7 +17,7 @@ impl Add<Vec2f> for Vec2f {
 }
 
 fn main() {
-    let updater = Chain(move |e: EntId, comps: &mut BasicComps, _: &()| {
+    let updater = |e: EntId, comps: &mut BasicComps, _: &()| {
         let mut pos;
         if let Some(vel) = comps.get::<Vec2f>(e, 1) {
             pos = vel.clone();
@@ -28,9 +28,10 @@ fn main() {
             pos = pos + *p;
             *p = pos;
         }
-    }, ());
+    };
     let mut w = State::new(BasicComps::default(), updater);
     w.comps.register_comp::<Vec2f>(&()).unwrap();
+    //Creating entities
     for i in 0..4 {
         for j in 0..2 {
             let e = w.new_ent();
@@ -48,6 +49,7 @@ fn main() {
             let _ = w.new_ent();
         }
     }
+    //Updating and printing the state
     println!("===== Iteration #0 ======");
     print(&w);
     w.update(&());
