@@ -6,9 +6,9 @@ use {EntId, Ents, Comps, Updater};
 
 pub struct Chain<A, B>(pub A, pub B);
 
-impl<A, B, D, Cs: Comps> Updater<D, Cs> for Chain<A, B>
-    where A: Updater<D, Cs>,
-          B: Updater<D, Cs>
+impl<A, B, Cs: Comps, D> Updater<Cs, D> for Chain<A, B>
+    where A: Updater<Cs, D>,
+          B: Updater<Cs, D>
 {
     fn update(&mut self, ents: &mut Ents, comps: &mut Cs, data: &D) {
         self.0.update(ents, comps, data);
@@ -16,7 +16,7 @@ impl<A, B, D, Cs: Comps> Updater<D, Cs> for Chain<A, B>
     }
 }
 
-impl<D, Cs: Comps, F> Updater<D, Cs> for F
+impl<Cs: Comps, D, F> Updater<Cs, D> for F
     where F: FnMut(EntId, &mut Cs, &D)
 {
     fn update(&mut self, ents: &mut Ents, comps: &mut Cs, data: &D) {
@@ -26,7 +26,7 @@ impl<D, Cs: Comps, F> Updater<D, Cs> for F
     }
 }
 
-impl<D, Cs: Comps> Updater<D, Cs> for () {
+impl<Cs: Comps, D> Updater<Cs, D> for () {
     fn update(&mut self, ents: &mut Ents, comps: &mut Cs, data: &D) {
         
     }

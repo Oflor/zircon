@@ -73,7 +73,7 @@ pub trait Comps {
 }
 
 /// State updater. In a classic ECS model, `Updater` is a manager of systems.
-pub trait Updater<D, Cs: Comps> {
+pub trait Updater<Cs: Comps, D> {
     /// Updates the world state.
     fn update(&mut self, ents: &mut Ents, comps: &mut Cs, data: &D);
 }
@@ -81,7 +81,7 @@ pub trait Updater<D, Cs: Comps> {
 use std::marker::PhantomData;
 
 /// The main struct of an ECS, `State` stores the updater, components and entities of the system.
-pub struct State<D, Cs, Upd> {
+pub struct State<Cs, Upd, D> {
     _pd: PhantomData<D>,
     pub comps: Cs,
     pub updater: Upd,
@@ -89,15 +89,15 @@ pub struct State<D, Cs, Upd> {
     current: EntId,
 }
 
-impl<D, Cs, Upd> State<D, Cs, Upd>
+impl<Cs, Upd, D> State<Cs, Upd, D>
     where Cs: Comps,
-          Upd: Updater<D, Cs>
+          Upd: Updater<Cs, D>
 {
     /// Creates a new empty `State` with the specified components and systems managers.
     ///
     /// The new `State` contains no entities, and the next alive entity will have ID #1.
     /// Entity #0 is considered invalid, using it may cause panics.
-    pub fn new(comps: Cs, updater: Upd) -> State<D, Cs, Upd> {
+    pub fn new(comps: Cs, updater: Upd) -> State<Cs, Upd, D> {
         State {
             _pd: PhantomData,
             comps: comps,
@@ -133,11 +133,11 @@ impl<D, Cs, Upd> State<D, Cs, Upd>
     }
 }
 
-impl<D, Cs, Upd> Default for State<D, Cs, Upd>
+impl<Cs, Upd, D> Default for State<Cs, Upd, D>
     where Cs: Comps + Default,
-          Upd: Updater<D, Cs> + Default
+          Upd: Updater<Cs, D> + Default
 {
-    fn default() -> State<D, Cs, Upd> {
+    fn default() -> State<Cs, Upd, D> {
         State::new(Cs::default(), Upd::default())
     }
 }

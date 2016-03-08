@@ -5,9 +5,6 @@ use zircon::impls::*;
 use zircon::impls::basic::*;
 
 use std::ops::Add;
-use std::collections::{HashMap, BTreeMap};
-use std::any::TypeId;
-use std::mem::transmute;
 
 #[derive(Debug, Clone, Copy)]
 struct Vec2f(f32, f32);
@@ -20,7 +17,7 @@ impl Add<Vec2f> for Vec2f {
 }
 
 fn main() {
-    let updater = Chain(move |e: EntId, comps: &mut BasicComps, data: &()| {
+    let updater = Chain(move |e: EntId, comps: &mut BasicComps, _: &()| {
         let mut pos;
         if let Some(vel) = comps.get::<Vec2f>(e, 1) {
             pos = vel.clone();
@@ -32,7 +29,7 @@ fn main() {
             *p = pos;
         }
     }, ());
-    let mut w = State::<(), BasicComps, _>::new(BasicComps::default(), updater);
+    let mut w = State::new(BasicComps::default(), updater);
     w.comps.register_comp::<Vec2f>(&()).unwrap();
     for i in 0..4 {
         for j in 0..2 {
@@ -47,16 +44,18 @@ fn main() {
             w.comps.insert(e,
                            Vec2f(0.125 * (j + i * 6) as f32, 0.25 * (j + i * 6) as f32));
         }
-        for j in 4..6 {
-            let e = w.new_ent();
+        for _ in 4..6 {
+            let _ = w.new_ent();
         }
     }
+    println!("===== Iteration #0 ======");
     print(&w);
     w.update(&());
+    println!("===== Iteration #1 ======");
     print(&w);
 }
 
-fn print<D, U: Updater<D, BasicComps>>(w: &State<D, BasicComps, U>) {
+fn print<D, U: Updater<BasicComps, D>>(w: &State<BasicComps, U, D>) {
     for &e in w.ents.iter() {
         println!("Entity #{}: ", e);
         for i in 0..w.comps.len::<Vec2f>(e) {
