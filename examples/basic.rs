@@ -1,6 +1,7 @@
 extern crate zircon;
 
 use zircon::*;
+use zircon::impls::*;
 use zircon::impls::basic::*;
 
 use std::ops::Add;
@@ -18,14 +19,8 @@ impl Add<Vec2f> for Vec2f {
     }
 }
 
-trait System {
-    fn update(&mut self, e: EntId, comps: &mut BasicComps);
-}
-
-struct Physics;
-
-impl System for Physics {
-    fn update(&mut self, e: EntId, comps: &mut BasicComps) {
+fn main() {
+    let updater = Chain(move |e: EntId, comps: &mut BasicComps, data: &()| {
         let mut pos;
         if let Some(vel) = comps.get::<Vec2f>(e, 1) {
             pos = vel.clone();
@@ -36,32 +31,8 @@ impl System for Physics {
             pos = pos + *p;
             *p = pos;
         }
-    }
-}
-
-use std::marker::PhantomData;
-
-#[derive(Default)]
-struct MySysts<Cs: Comps> {
-    _pd: PhantomData<Cs>,
-    systs: Vec<Box<System>>
-}
-
-impl<Cs: Comps> Updater for MySysts<Cs> {
-    type UpdateData = ();
-    type Comps = Cs;
-    fn update(&mut self, ents: &mut Ents, comps: &mut Cs, _: &()) {
-        for s in &mut self.systs {
-            for e in ents.iter() {
-                s.update(*e, comps);
-            }
-        }
-    }
-}
-
-fn main() {
-    let mut w = State::<BasicComps, MySysts>::default();
-    w.updater.systs.push(Box::new(Physics));
+    }, ());
+    let mut w = State::<(), BasicComps, _>::new(BasicComps::default(), updater);
     w.comps.register_comp::<Vec2f>(&()).unwrap();
     for i in 0..4 {
         for j in 0..2 {
@@ -85,7 +56,7 @@ fn main() {
     print(&w);
 }
 
-fn print(w: &State<BasicComps, MySysts<BasicComps>>) {
+fn print<D, U: Updater<D, BasicComps>>(w: &State<D, BasicComps, U>) {
     for &e in w.ents.iter() {
         println!("Entity #{}: ", e);
         for i in 0..w.comps.len::<Vec2f>(e) {

@@ -73,32 +73,33 @@ pub trait Comps {
 }
 
 /// State updater. In a classic ECS model, `Updater` is a manager of systems.
-pub trait Updater {
-    /// Data to send with the update method.
-    type UpdateData;
-    type Comps: Comps;
+pub trait Updater<D, Cs: Comps> {
     /// Updates the world state.
-    fn update(&mut self, ents: &mut Ents, comps: &mut Self::Comps, data: &Self::UpdateData);
+    fn update(&mut self, ents: &mut Ents, comps: &mut Cs, data: &D);
 }
 
+use std::marker::PhantomData;
+
 /// The main struct of an ECS, `State` stores the updater, components and entities of the system.
-pub struct State<Cs, Upd> {
+pub struct State<D, Cs, Upd> {
+    _pd: PhantomData<D>,
     pub comps: Cs,
     pub updater: Upd,
     pub ents: Ents,
     current: EntId,
 }
 
-impl<Cs, Upd> State<Cs, Upd>
+impl<D, Cs, Upd> State<D, Cs, Upd>
     where Cs: Comps,
-          Upd: Updater<Comps = Cs>
+          Upd: Updater<D, Cs>
 {
     /// Creates a new empty `State` with the specified components and systems managers.
     ///
     /// The new `State` contains no entities, and the next alive entity will have ID #1.
     /// Entity #0 is considered invalid, using it may cause panics.
-    pub fn new(comps: Cs, updater: Upd) -> State<Cs, Upd> {
+    pub fn new(comps: Cs, updater: Upd) -> State<D, Cs, Upd> {
         State {
+            _pd: PhantomData,
             comps: comps,
             updater: updater,
             ents: Ents::new(),
@@ -112,7 +113,7 @@ impl<Cs, Upd> State<Cs, Upd>
     /// B will always have a larger ID, even if A by that time is dead.
     pub fn new_ent(&mut self) -> EntId {
         self.current += 1;
-        self.ents.insert(self.current);
+        self.ents.insert(self.current); 
         self.current
     }
 
@@ -127,16 +128,16 @@ impl<Cs, Upd> State<Cs, Upd>
     }
 
     /// Update the state.
-    pub fn update(&mut self, data: &Upd::UpdateData) {
+    pub fn update(&mut self, data: &D) {
         self.updater.update(&mut self.ents, &mut self.comps, data);
     }
 }
 
-impl<Cs, Upd> Default for State<Cs, Upd>
+impl<D, Cs, Upd> Default for State<D, Cs, Upd>
     where Cs: Comps + Default,
-          Upd: Updater<Comps = Cs> + Default
+          Upd: Updater<D, Cs> + Default
 {
-    fn default() -> State<Cs, Upd> {
+    fn default() -> State<D, Cs, Upd> {
         State::new(Cs::default(), Upd::default())
     }
 }
