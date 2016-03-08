@@ -18,23 +18,39 @@ impl Add<Vec2f> for Vec2f {
     }
 }
 
+trait System {
+    fn update(&mut self, e: EntId, comps: &mut BasicComps);
+}
+
+struct Physics;
+
+impl System for Physics {
+    fn update(&mut self, e: EntId, comps: &mut BasicComps) {
+        let mut pos;
+        if let Some(vel) = comps.get::<Vec2f>(e, 1) {
+            pos = vel.clone();
+        } else {
+            return;
+        }
+        if let Some(p) = comps.get_mut::<Vec2f>(e, 0) {
+            pos = pos + *p;
+            *p = pos;
+        }
+    }
+}
+
 #[derive(Default)]
-struct MySysts;
+struct MySysts {
+    systs: Vec<Box<System>>
+}
 
 impl Updater for MySysts {
     type UpdateData = ();
     type Comps = BasicComps;
     fn update(&mut self, ents: &mut Ents, comps: &mut BasicComps, _: &()) {
-        for e in ents.iter() {
-            let mut pos;
-            if let Some(vel) = comps.get::<Vec2f>(*e, 1) {
-                pos = vel.clone();
-            } else {
-                continue;
-            }
-            if let Some(p) = comps.get_mut::<Vec2f>(*e, 0) {
-                pos = pos + *p;
-                *p = pos;
+        for s in &mut self.systs {
+            for e in ents.iter() {
+                s.update(*e, comps);
             }
         }
     }
@@ -42,6 +58,7 @@ impl Updater for MySysts {
 
 fn main() {
     let mut w = State::<BasicComps, MySysts>::default();
+    w.updater.systs.push(Box::new(Physics));
     w.comps.register_comp::<Vec2f>(&()).unwrap();
     for i in 0..4 {
         for j in 0..2 {
