@@ -39,15 +39,18 @@ impl System for Physics {
     }
 }
 
+use std::marker::PhantomData;
+
 #[derive(Default)]
-struct MySysts {
+struct MySysts<Cs: Comps> {
+    _pd: PhantomData<Cs>,
     systs: Vec<Box<System>>
 }
 
-impl Updater for MySysts {
+impl<Cs: Comps> Updater for MySysts<Cs> {
     type UpdateData = ();
-    type Comps = BasicComps;
-    fn update(&mut self, ents: &mut Ents, comps: &mut BasicComps, _: &()) {
+    type Comps = Cs;
+    fn update(&mut self, ents: &mut Ents, comps: &mut Cs, _: &()) {
         for s in &mut self.systs {
             for e in ents.iter() {
                 s.update(*e, comps);
@@ -82,7 +85,7 @@ fn main() {
     print(&w);
 }
 
-fn print(w: &State<BasicComps, MySysts>) {
+fn print(w: &State<BasicComps, MySysts<BasicComps>>) {
     for &e in w.ents.iter() {
         println!("Entity #{}: ", e);
         for i in 0..w.comps.len::<Vec2f>(e) {
