@@ -17,14 +17,16 @@ impl Add<Vec2f> for Vec2f {
 }
 
 fn main() {
-    let updater = |e: EntId, _: &Ents, comps: &mut BasicComps, _: &()| {
+    let updater = |e: EntId, _: &Ents, comps: &BasicComps, _: &()| {
         let mut pos_new;
+        let mut vec: Vec<<BasicComps as Comps>::Diff> = Vec::with_capacity(1);
         if let (Some(&pos), Some(&vel)) = (comps.get::<Vec2f>(e, 0), comps.get::<Vec2f>(e, 1)) {
             pos_new = pos.clone() + vel.clone();
         } else {
-            return;
+            return vec;
         }
-        comps.replace::<Vec2f>(e, 0, pos_new);
+        vec.push(<BasicComps as Comps>::Diff::replace::<Vec2f>(comps, e, 0, pos_new));
+        vec
     };
     let mut w = State::new(BasicComps::default(), updater);
     w.comps.register_comp::<Vec2f>(&()).unwrap();

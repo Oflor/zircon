@@ -30,12 +30,13 @@ impl<A, B, Cs: Comps, D> Updater<Cs, D> for Chain<A, B>
     }
 }
 
-impl<Cs: Comps, D, F> Updater<Cs, D> for F
-    where F: FnMut(EntId, &Ents, &mut Cs, &D)
+impl<Cs: Comps, D, F, E: IntoIterator<Item=Cs::Diff>> Updater<Cs, D> for F
+    where F: FnMut(EntId, &Ents, &Cs, &D) -> E
 {
     fn update(&mut self, ents: &mut Ents, comps: &mut Cs, data: &D) {
         for &e in ents.iter() {
-            self(e, ents, comps, data)
+            let iter = self(e, ents, comps, data);
+            comps.commit(iter);
         }
     }
 }

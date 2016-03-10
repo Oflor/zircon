@@ -166,11 +166,13 @@ impl Comps for BasicComps {
     }
     
     fn commit<D: IntoIterator<Item=BasicCompsDiff>>(&mut self, diffs: D) {
+        use std::ops::Deref;
+        
         for diff in diffs {
             match diff {
-                BasicCompsDiff(Insert(t, e, comp)) => {},
-                BasicCompsDiff(Remove(t, e)) => {},
-                BasicCompsDiff(Replace(t, e, idx, comp)) => {}
+                BasicCompsDiff(Insert(t, e, comp)) => { self.insert_dyn(t, e, comp.deref()); },
+                BasicCompsDiff(Remove(t, e)) => { self.pop_dyn(t, e); },
+                BasicCompsDiff(Replace(t, e, idx, comp)) => { self.replace_dyn(t, e, idx, comp.deref()); }
             }
         }
     }
