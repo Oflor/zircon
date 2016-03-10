@@ -1,5 +1,7 @@
 //! Zircon - Entity Component System (ECS) implementation in Rust
 
+extern crate rayon;
+
 pub mod impls;
 
 use std::collections::BTreeSet;

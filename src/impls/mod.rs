@@ -11,9 +11,9 @@ use super::*;
 /// Because `Chain` itself implements `Updater`, it could contain another `Chain`:
 ///
 /// ```
-/// let updater = Chain(|_, _, _| println!("System 1"),
-///               Chain(|e, _, _| println!("Entity #{}", e),
-///                     |_, _, _| println!("System 3")));
+/// let updater = Chain(|_, _, _, _| { println!("System 1"); Vec::new() },
+///               Chain(|e, _, _, _| { println!("Entity #{}", e); Vec::new() },
+///                     |_, _, _, _| { println!("System 3"); Vec::new() }));
 /// ```
 /// This code won't actually compile, because the argument types need to be specified for closures
 /// to become implementors of `Updater`.
@@ -30,19 +30,22 @@ impl<A, B, Cs: Comps, D> Updater<Cs, D> for Chain<A, B>
     }
 }
 
-impl<Cs: Comps, D, F, E: IntoIterator<Item=Cs::Diff>> Updater<Cs, D> for F
-    where F: FnMut(EntId, &Ents, &Cs, &D) -> E
+use rayon::prelude::*;
+use rayon::par_iter::collect::collect_into;
+
+impl<Cs: Comps + Sync, D: Sync, F: Sync, E: Sync + Send + IntoIterator<Item=Cs::Diff>> Updater<Cs, D> for F
+    where F: Fn(EntId, &Ents, &Cs, &D) -> E
 {
     fn update(&mut self, ents: &mut Ents, comps: &mut Cs, data: &D) {
-        for &e in ents.iter() {
-            let iter = self(e, ents, comps, data);
+        let mut vec = Vec::new();
+        collect_into(ents.iter().collect::<Vec<&EntId>>()
+            .par_iter().map(|&&e| self(e, ents, comps, data)), &mut vec);
+        for iter in vec {
             comps.commit(iter);
         }
     }
 }
 
 impl<Cs: Comps, D> Updater<Cs, D> for () {
-    fn update(&mut self, _: &mut Ents, _: &mut Cs, _: &D) {
-        
-    }
+    fn update(&mut self, _: &mut Ents, _: &mut Cs, _: &D) { }
 }
