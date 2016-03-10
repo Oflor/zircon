@@ -40,6 +40,8 @@ impl<Cs: Comps + Sync, D: Sync, F: Sync, E: Sync + Send + IntoIterator<Item=Cs::
         let mut vec = Vec::new();
         collect_into(ents.iter().collect::<Vec<&EntId>>()
             .par_iter().map(|&&e| self(e, ents, comps, data)), &mut vec);
+        //vec = ents.iter().collect::<Vec<&EntId>>()
+        //    .iter().map(|&&e| self(e, ents, comps, data)).collect::<Vec<_>>();
         for iter in vec {
             comps.commit(iter);
         }

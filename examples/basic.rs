@@ -1,4 +1,6 @@
 extern crate zircon;
+extern crate chrono;
+use chrono::duration::Duration;
 
 use zircon::*;
 use zircon::impls::*;
@@ -31,29 +33,19 @@ fn main() {
     let mut w = State::new(BasicComps::default(), updater);
     w.comps.register_comp::<Vec2f>(&()).unwrap();
     //Creating entities
-    for i in 0..4 {
-        for j in 0..2 {
-            let e = w.new_ent();
-            w.comps.insert(e,
-                           Vec2f(0.125 * (j + i * 6) as f32, 0.25 * (j + i * 6) as f32));
-            w.comps.insert(e,
-                           Vec2f(0.25 * (j + i * 6) as f32, 0.125 * (j + i * 6) as f32));
-        }
-        for j in 2..4 {
-            let e = w.new_ent();
-            w.comps.insert(e,
-                           Vec2f(0.125 * (j + i * 6) as f32, 0.25 * (j + i * 6) as f32));
-        }
-        for _ in 4..6 {
-            let _ = w.new_ent();
-        }
+    for i in 0..65536 {
+        let e = w.new_ent();
+        w.comps.insert(e,
+                       Vec2f(0.125 * i as f32, 0.25 * i as f32));
+        w.comps.insert(e,
+                       Vec2f(0.25 * i as f32, 0.125 * i as f32));
     }
     //Updating and printing the state
-    println!("===== Iteration #0 ======");
-    print(&w);
-    w.update(&());
-    println!("===== Iteration #1 ======");
-    print(&w);
+    //print(&w);
+    for _ in 0..16 {
+        println!("Took: {} ms", Duration::span(|| w.update(&())).num_milliseconds());
+    }
+    //print(&w);
 }
 
 fn print<D, U: Updater<BasicComps, D>>(w: &State<BasicComps, U, D>) {
