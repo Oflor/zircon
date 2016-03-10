@@ -2,7 +2,7 @@
 
 pub mod basic;
 
-use {EntId, Ents, Comps, Updater};
+use super::*;
 
 /// A struct for chained invokation of `Updater`s.
 ///
@@ -31,11 +31,11 @@ impl<A, B, Cs: Comps, D> Updater<Cs, D> for Chain<A, B>
 }
 
 impl<Cs: Comps, D, F> Updater<Cs, D> for F
-    where F: FnMut(EntId, &mut Cs, &D)
+    where F: FnMut(EntId, &Ents, &mut Cs, &D)
 {
     fn update(&mut self, ents: &mut Ents, comps: &mut Cs, data: &D) {
         for &e in ents.iter() {
-            self(e, comps, data)
+            self(e, ents, comps, data)
         }
     }
 }

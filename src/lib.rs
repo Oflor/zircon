@@ -43,9 +43,9 @@ pub trait Comps {
     /// Returns `None` if that component does not exist.
     fn get<T: Comp>(&self, e: EntId, idx: usize) -> Option<&T>;
 
-    /// Get a mutable reference to the `idx`th component `T` of the entity `e`.
+    /// Replaces the `idx`th component `T` of the entity `e`.
     /// Returns `None` if that component does not exist.
-    fn get_mut<T: Comp>(&mut self, e: EntId, idx: usize) -> Option<&mut T>;
+    fn replace<T: Comp>(&mut self, e: EntId, idx: usize, comp: T) -> Option<()>;
 
     /// Get a reference to the first component `T` of the entity `e`.
     /// Returns `None` if that component does not exist.
@@ -53,23 +53,32 @@ pub trait Comps {
         Self::get::<T>(self, e, 0)
     }
 
-    /// Get a mutable reference to the first component `T` of the entity `e`.
+    /// Replaces the first component `T` of the entity `e`.
     /// Returns `None` if that component does not exist.
-    fn get_first_mut<T: Comp>(&mut self, e: EntId) -> Option<&mut T> {
-        Self::get_mut::<T>(self, e, 0)
+    fn replace_first<T: Comp>(&mut self, e: EntId, comp: T) -> Option<()> {
+        Self::replace::<T>(self, e, 0, comp)
     }
     /// Adds a new component `T` to the entity `e` and returns its index.
     fn insert<T: Comp>(&mut self, e: EntId, comp: T) -> usize;
 
-    /// Removes the `idx`th component `T` of the entity `e` and returns it.
-    /// Returns `None` if that component did not exist.
-    fn remove<T: Comp>(&mut self, e: EntId, idx: usize) -> Option<T>;
+    /// Removes the last component `T` of the entity `e` and returns it.
+    /// Returns `None` if that entity contained no components of that type.
+    fn pop<T: Comp>(&mut self, e: EntId) -> Option<T>;
 
     /// Removes all components `T` of the entity `e`.
-    fn remove_all<T: Comp>(&mut self, e: EntId);
+    fn remove_all<T: Comp>(&mut self, e: EntId) {
+        for _ in 0..self.len::<T>(e) {
+            self.pop::<T>(e);
+        }
+    }
 
     /// Returns the number of components `T` of the entity `e`.
     fn len<T: Comp>(&self, e: EntId) -> usize;
+}
+
+pub trait Diff<Cs: Comps> {
+    fn insert<T: Comp>(&comps: Cs, e: EntId, comp: T) -> Self;
+    fn pop<T: Comp>(&comps: Cs, e: EntId) -> Self;
 }
 
 /// State updater. In a classic ECS model, `Updater` is a manager of systems.

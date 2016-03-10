@@ -27,10 +27,14 @@ impl Comps for BasicComps {
         None
     }
 
-    fn get_mut<T: Comp>(&mut self, e: EntId, idx: usize) -> Option<&mut T> {
+    fn replace<T: Comp>(&mut self, e: EntId, idx: usize, comp: T) -> Option<()> {
         if let Some(btm) = self.comps.get_mut(&TypeId::of::<T>()) {
             if let Some(vec) = btm.get_mut(&e) {
-                return unsafe { transmute::<_, &mut Vec<T>>(vec) }.get_mut(idx)
+                let vec = unsafe { transmute::<_, &mut Vec<T>>(vec) };
+                if idx < vec.len() {
+                    vec[idx] = comp;
+                    return Some(());
+                }
             }
         }
         None
@@ -52,13 +56,11 @@ impl Comps for BasicComps {
         }
     }
 
-    fn remove<T: Comp>(&mut self, e: EntId, idx: usize) -> Option<T> {
+    fn pop<T: Comp>(&mut self, e: EntId) -> Option<T> {
         if let Some(btm) = self.comps.get_mut(&TypeId::of::<T>()) {
             if let Some(vec) = btm.get_mut(&e) {
                 let vec = unsafe { transmute::<_, &mut Vec<T>>(vec) };
-                if idx < vec.len() {
-                    return Some(vec.remove(idx))
-                }
+                return vec.pop()
             }
         }
         None
