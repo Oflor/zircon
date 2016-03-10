@@ -29,12 +29,14 @@ impl<T> Comp for T where T: Any + Sized + Clone
 /// ```
 ///
 /// Note, that like everything in Rust, entity's components are zero-indexed.
-pub trait Comps {
+pub trait Comps: Sized {
     /// A type of additional data to be used when registring a new type of components.
     /// Could be used to specify the style of storing the components of that type in memory.
     type RegData;
     /// A type of error to be returned when failing to register a type of components.
     type RegError;
+    /// Diff represents the changes in the components (e.g. component removal, insertion, or mutation)
+    type Diff: Diff<Self>;
 
     /// Register a new type of components, allowing the manager to store them.
     fn register_comp<T: Comp>(&mut self, &Self::RegData) -> Result<(), Self::RegError>;
@@ -58,6 +60,7 @@ pub trait Comps {
     fn replace_first<T: Comp>(&mut self, e: EntId, comp: T) -> Option<()> {
         Self::replace::<T>(self, e, 0, comp)
     }
+    
     /// Adds a new component `T` to the entity `e` and returns its index.
     fn insert<T: Comp>(&mut self, e: EntId, comp: T) -> usize;
 
@@ -74,11 +77,14 @@ pub trait Comps {
 
     /// Returns the number of components `T` of the entity `e`.
     fn len<T: Comp>(&self, e: EntId) -> usize;
+    
+    fn commit<D: IntoIterator<Item=Self::Diff>>(&mut self, D);
 }
 
-pub trait Diff<Cs: Comps> {
-    fn insert<T: Comp>(&comps: Cs, e: EntId, comp: T) -> Self;
-    fn pop<T: Comp>(&comps: Cs, e: EntId) -> Self;
+pub trait Diff<Cs: Comps>: Sized {
+    fn insert<T: Comp>(comps: &Cs, e: EntId, comp: T) -> Self;
+    fn pop<T: Comp>(comps: &Cs, e: EntId) -> Self;
+    fn replace<T: Comp>(comps: &Cs, e: EntId, idx: usize, comp: T) -> Self;
 }
 
 /// State updater. In a classic ECS model, `Updater` is a manager of systems.
